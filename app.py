@@ -573,7 +573,7 @@ df["margin"] = (df["net_profit"] / df["revenue"] * 100).round(1)
 fig5 = go.Figure()
 fig5.add_trace(go.Scatter(
     x=df["month"], y=df["margin"],
-    fill="tozeroy", mode="lines+markers",
+    fill="tozeroy",
     line=dict(color="#8b5cf6", width=2.5),
     fillcolor="rgba(139,92,246,0.10)",
     marker=dict(size=7, color="#8b5cf6"),
