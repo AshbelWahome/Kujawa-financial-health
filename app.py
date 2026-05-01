@@ -3,396 +3,605 @@ import requests
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
+import re
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 # PAGE CONFIG
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="BookMetro Dashboard",
-    page_icon="📦",
+    page_title="Kujawa Transport Solutions",
+    page_icon="🚚",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ─────────────────────────────────────────────
-# CUSTOM CSS
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# CSS
+# ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Sora', sans-serif; }
-[data-testid="stSidebar"] { background: #0f1117; border-right: 1px solid #1e2130; }
-[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
-.main .block-container { padding: 2rem 2.5rem; max-width: 1400px; }
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Unbounded:wght@300;400;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'IBM Plex Mono', monospace;
+}
+[data-testid="stSidebar"] {
+    background: #0b0f1a;
+    border-right: 1px solid #1a2035;
+}
+[data-testid="stSidebar"] * { color: #8898b8 !important; }
+[data-testid="stSidebar"] label {
+    font-size: 9px !important;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #3d4f70 !important;
+}
+.main .block-container { padding: 1.5rem 2rem; max-width: 1600px; }
+
+.page-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1a2035; }
+.page-title { font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 700; color: #e2eaf8; letter-spacing: -0.02em; margin: 0; }
+.page-subtitle { font-size: 11px; color: #3d4f70; letter-spacing: 0.06em; margin-top: 4px; }
+
 .kpi-card {
-    background: linear-gradient(135deg, #1a1f2e 0%, #161b28 100%);
-    border: 1px solid #1e2130; border-radius: 16px;
-    padding: 1.4rem 1.6rem; position: relative; overflow: hidden;
+    background: #0b0f1a; border: 1px solid #1a2035; border-radius: 10px;
+    padding: 1.1rem 1.3rem; position: relative; overflow: hidden;
 }
-.kpi-card::before {
-    content:''; position:absolute; top:0; left:0; right:0;
-    height:2px; border-radius:16px 16px 0 0;
+.kpi-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
 }
-.kpi-card.green::before  { background: #22c55e; }
-.kpi-card.red::before    { background: #ef4444; }
-.kpi-card.blue::before   { background: #3b82f6; }
-.kpi-card.amber::before  { background: #f59e0b; }
-.kpi-card.purple::before { background: #8b5cf6; }
-.kpi-label { font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#64748b; margin-bottom:6px; font-family:'DM Mono',monospace; }
-.kpi-value { font-size:24px; font-weight:700; color:#f1f5f9; font-family:'DM Mono',monospace; letter-spacing:-0.02em; }
-.kpi-sub   { font-size:11px; color:#475569; margin-top:4px; font-family:'DM Mono',monospace; }
-.section-header { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#475569; font-family:'DM Mono',monospace; margin:2rem 0 1rem; padding-bottom:8px; border-bottom:1px solid #1e2130; }
-.bs-table { width:100%; border-collapse:collapse; font-family:'DM Mono',monospace; font-size:13px; }
-.bs-table th { padding:10px 16px; text-align:left; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#475569; border-bottom:1px solid #1e2130; }
-.bs-table td { padding:9px 16px; color:#cbd5e1; border-bottom:1px solid #0f1117; }
-.bs-table tr:hover td { background:#1a1f2e; }
-.bs-table .total-row td { color:#f1f5f9; font-weight:600; border-top:1px solid #2d3550; border-bottom:2px solid #2d3550; }
-.bs-table .section-row td { color:#94a3b8; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; padding-top:16px; background:transparent; }
-.positive { color:#22c55e !important; }
-.negative { color:#ef4444 !important; }
+.kpi-card.cyan::after  { background: linear-gradient(90deg,#00d4ff,transparent); }
+.kpi-card.green::after { background: linear-gradient(90deg,#00ff94,transparent); }
+.kpi-card.red::after   { background: linear-gradient(90deg,#ff4466,transparent); }
+.kpi-card.amber::after { background: linear-gradient(90deg,#ffb800,transparent); }
+.kpi-card.blue::after  { background: linear-gradient(90deg,#4488ff,transparent); }
+.kpi-label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: #3d4f70; margin-bottom: 8px; }
+.kpi-value { font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 700; color: #e2eaf8; letter-spacing: -0.03em; line-height: 1; }
+.kpi-sub { font-size: 10px; color: #2a3550; margin-top: 6px; }
+
+.section-heading {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #2a3550;
+    margin: 1.8rem 0 0.8rem; padding-bottom: 6px; border-bottom: 1px solid #1a2035;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-heading::before {
+    content: ''; display: inline-block; width: 3px; height: 12px;
+    background: #00d4ff; border-radius: 2px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-CHART_LAYOUT = dict(
-    plot_bgcolor="#13161f", paper_bgcolor="#13161f",
-    font=dict(family="DM Mono", color="#94a3b8", size=11),
-    margin=dict(l=0, r=0, t=30, b=0),
-    xaxis=dict(gridcolor="#1e2130"),
-    yaxis=dict(gridcolor="#1e2130"),
-    hovermode="x unified",
-)
+# ─────────────────────────────────────────────────────────────────
+# CHART DEFAULTS
+# ─────────────────────────────────────────────────────────────────
+BG    = "#0b0f1a"
+GRID  = "#1a2035"
+FONT  = dict(family="IBM Plex Mono, monospace", color="#5a6e90", size=11)
+COLORS = ["#00d4ff","#00ff94","#4488ff","#ffb800","#ff4466","#aa66ff","#ff8844"]
+DOW   = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 
-# ─────────────────────────────────────────────
+def BL(**kw):
+    d = dict(
+        plot_bgcolor=BG, paper_bgcolor=BG, font=FONT,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis=dict(gridcolor=GRID, linecolor=GRID, tickfont=dict(size=10)),
+        yaxis=dict(gridcolor=GRID, linecolor=GRID, tickfont=dict(size=10)),
+        legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10), orientation="h", y=1.1),
+        hovermode="x unified",
+    )
+    d.update(kw)
+    return d
+
+# ─────────────────────────────────────────────────────────────────
 # DATA FETCH
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 API_URL = "https://server.bookmetro.co.ke/api/v1.1/parcels/analytics/export"
 
 @st.cache_data(ttl=300, show_spinner=False)
-def fetch_all():
+def fetch():
     try:
-        r = requests.get(API_URL, timeout=20)
+        r = requests.get(API_URL, timeout=25)
         r.raise_for_status()
         return r.json(), None
     except Exception as e:
         return None, str(e)
 
-with st.spinner("Fetching BookMetro data..."):
-    raw, fetch_err = fetch_all()
+with st.spinner("Loading Kujawa data..."):
+    raw, fetch_err = fetch()
 
 if fetch_err or not raw:
-    st.error(f"Could not reach API: {fetch_err}")
+    st.error(f"API error: {fetch_err}")
     st.stop()
 
-# ─────────────────────────────────────────────
-# PARSE
-# ─────────────────────────────────────────────
-def to_df(records, date_field):
-    if not records:
-        return pd.DataFrame()
-    df = pd.DataFrame(records)
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
-    df["date"]   = pd.to_datetime(df[date_field]).dt.normalize()
-    df["month"]  = df["date"].dt.to_period("M").astype(str)
-    df["month_name"] = df["date"].dt.strftime("%B %Y")
-    df["day_name"]   = df["date"].dt.day_name()
+# ─────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────
+def hms_to_min(s):
+    if not s or not isinstance(s, str): return None
+    try:
+        h = int(re.search(r'(\d+)h', s).group(1)) if re.search(r'(\d+)h', s) else 0
+        m = int(re.search(r'(\d+)m', s).group(1)) if re.search(r'(\d+)m', s) else 0
+        sec = int(re.search(r'(\d+)s', s).group(1)) if re.search(r'(\d+)s', s) else 0
+        return round(h*60 + m + sec/60, 2)
+    except: return None
+
+def add_time_cols(df, date_col):
+    df["date"]        = pd.to_datetime(df[date_col]).dt.normalize()
+    df["month"]       = df["date"].dt.strftime("%Y-%m")
+    df["month_label"] = df["date"].dt.strftime("%b %Y")
+    df["day_name"]    = df["date"].dt.day_name()
     return df
 
-rev_df = to_df(raw["data"].get("revenue", []),  "revenueDate")
-exp_df = to_df(raw["data"].get("expenses", []), "expenseDate")
+def kpi_card(col, label, value, sub, color):
+    with col:
+        st.markdown(
+            f'<div class="kpi-card {color}">'
+            f'<div class="kpi-label">{label}</div>'
+            f'<div class="kpi-value">{value}</div>'
+            f'<div class="kpi-sub">{sub}</div></div>',
+            unsafe_allow_html=True,
+        )
+
+def section(title):
+    st.markdown(f'<div class="section-heading">{title}</div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────
+# PARSE
+# ─────────────────────────────────────────────────────────────────
 
 # Parcels
 par_raw = raw["data"].get("parcels", [])
 par_df  = pd.DataFrame(par_raw) if par_raw else pd.DataFrame()
 if not par_df.empty:
-    # find best date column
-    for dc in ["parcelDate","createdAt","date","updatedAt"]:
-        if dc in par_df.columns:
-            par_df["date"] = pd.to_datetime(par_df[dc]).dt.normalize()
-            break
-    par_df["month"]      = par_df["date"].dt.to_period("M").astype(str)
-    par_df["month_name"] = par_df["date"].dt.strftime("%B %Y")
-    par_df["day_name"]   = par_df["date"].dt.day_name()
+    par_df = add_time_cols(par_df, "createdAt")
+    par_df["reg_min"]     = par_df["registeredTimeHms"].apply(hms_to_min)
+    par_df["pending_min"] = par_df["pendingTimeHms"].apply(hms_to_min)
+    par_df["transit_min"] = par_df["inTransitTimeHms"].apply(hms_to_min)
+    for c in ["routeName","townName","areaName"]:
+        if c in par_df.columns:
+            par_df[c] = par_df[c].fillna("Unknown").str.strip().str.title()
 
-    # detect route column
-    route_col = next((c for c in ["route","routeName","route_name","routeId","from","origin","destination"] if c in par_df.columns), None)
+# Revenue
+rev_raw = raw["data"].get("revenue", [])
+rev_df  = pd.DataFrame(rev_raw) if rev_raw else pd.DataFrame()
+if not rev_df.empty:
+    rev_df["amount"] = pd.to_numeric(rev_df["amount"], errors="coerce").fillna(0)
+    rev_df = add_time_cols(rev_df, "revenueDate")
+    # Link revenue to route/town via parcelCode in description
+    if not par_df.empty and "parcelCode" in par_df.columns:
+        pmap = (par_df.drop_duplicates("parcelCode")
+                .set_index("parcelCode")[["routeName","townName"]]
+                .to_dict("index"))
+        def get_code(desc):
+            if not isinstance(desc, str): return None
+            m = re.search(r'([A-Z]{2}\d{4}-\d+)', desc)
+            return m.group(1) if m else None
+        rev_df["_code"] = rev_df["description"].apply(get_code)
+        rev_df["routeName"] = rev_df["_code"].map(lambda x: pmap.get(x, {}).get("routeName", "Unknown") if x else "Unknown")
+        rev_df["townName"]  = rev_df["_code"].map(lambda x: pmap.get(x, {}).get("townName",  "Unknown") if x else "Unknown")
+    else:
+        rev_df["routeName"] = "Unknown"
+        rev_df["townName"]  = "Unknown"
 
-# ─────────────────────────────────────────────
-# GLOBAL METRICS
-# ─────────────────────────────────────────────
-total_revenue  = rev_df["amount"].sum() if not rev_df.empty else 0
-total_expenses = exp_df["amount"].sum() if not exp_df.empty else 0
+# Expenses — 3 source models
+exp_raw = raw["data"].get("expenses", [])
+exp_df  = pd.DataFrame(exp_raw) if exp_raw else pd.DataFrame()
+if not exp_df.empty:
+    exp_df["amount"]          = pd.to_numeric(exp_df["amount"], errors="coerce").fillna(0)
+    exp_df["transactionCost"] = pd.to_numeric(exp_df.get("transactionCost", pd.Series(dtype=float)), errors="coerce").fillna(0)
+    exp_df["total_cost"]      = exp_df["amount"] + exp_df["transactionCost"]
+    exp_df = add_time_cols(exp_df, "date")
+    # Unified channel label
+    def channel_label(row):
+        ch = str(row.get("expenseChannel","")).lower()
+        if ch == "bank":  return "Bank"
+        if ch == "phone": return "Phone (M-Pesa)"
+        src = str(row.get("source","")).lower()
+        if src == "cash": return "Cash"
+        return "Other"
+    exp_df["channel"] = exp_df.apply(channel_label, axis=1)
+
+# Summary
+total_revenue  = rev_df["amount"].sum()       if not rev_df.empty else 0
+total_expenses = exp_df["total_cost"].sum()   if not exp_df.empty else 0
 net_profit     = total_revenue - total_expenses
 margin_pct     = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 # SIDEBAR
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 📦 BookMetro")
+    st.markdown("""
+    <div style="padding:20px 18px 14px;border-bottom:1px solid #1a2035;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:#e2eaf8;letter-spacing:.03em;">KUJAWA</div>
+        <div style="font-size:9px;color:#2a3550;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;">Transport Solutions</div>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    section_choice = st.radio(
+        "Navigation",
+        ["📦  Parcel Analytics", "💰  Financials"],
+        label_visibility="collapsed",
+    )
+
     st.markdown("---")
-
-    all_months = ["All"] + sorted(rev_df["month_name"].unique().tolist()) if not rev_df.empty else ["All"]
-    sel_month  = st.selectbox("Filter by month", all_months)
-
-    all_routes = []
-    if not par_df.empty and route_col:
-        all_routes = sorted(par_df[route_col].dropna().astype(str).unique().tolist())
-    sel_route = st.selectbox("Filter parcels by route", ["All routes"] + all_routes) if all_routes else None
-
-    st.markdown("---")
-    if st.button("🔄 Refresh", use_container_width=True):
+    if st.button("⟳  Refresh", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
     st.markdown(
-        f'<p style="font-size:10px;color:#334155;font-family:DM Mono,monospace;">'
-        f'Last fetched<br>{datetime.now().strftime("%d %b %Y %H:%M")}</p>',
+        f'<p style="font-size:9px;color:#1a2035;line-height:1.9;padding-top:4px;">'
+        f'UPDATED<br>{datetime.now().strftime("%d %b %Y · %H:%M")}</p>',
         unsafe_allow_html=True,
     )
 
-# filtered slices
-def mfilter(df):
-    if sel_month == "All" or df.empty:
-        return df
-    return df[df["month_name"] == sel_month]
 
-rev_f = mfilter(rev_df)
-exp_f = mfilter(exp_df)
-par_f = mfilter(par_df) if not par_df.empty else par_df
+# ═════════════════════════════════════════════════════════════════
+# PARCEL ANALYTICS
+# ═════════════════════════════════════════════════════════════════
+if "Parcel" in section_choice:
 
-# ─────────────────────────────────────────────
-# HEADER
-# ─────────────────────────────────────────────
-st.markdown("## 📦 BookMetro Financial Dashboard")
-if sel_month != "All":
-    st.caption(f"Showing: {sel_month}")
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-title">Parcel Analytics</div>
+        <div class="page-subtitle">Volume · Distribution · Efficiency</div>
+    </div>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# KPI CARDS
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Overview</p>', unsafe_allow_html=True)
-c1, c2, c3, c4, c5 = st.columns(5)
-def kpi(col, label, value, sub, color):
-    with col:
-        st.markdown(f'<div class="kpi-card {color}"><div class="kpi-label">{label}</div>'
-                    f'<div class="kpi-value">{value}</div><div class="kpi-sub">{sub}</div></div>',
-                    unsafe_allow_html=True)
+    if par_df.empty:
+        st.info("No parcel data.")
+        st.stop()
 
-kpi(c1, "Total Revenue",  f"KES {total_revenue:,.0f}",  f"{len(rev_df)} txns",   "green")
-kpi(c2, "Total Expenses", f"KES {total_expenses:,.0f}", f"{len(exp_df)} txns",   "red")
-kpi(c3, "Net Profit",     f"KES {net_profit:,.0f}",     "Revenue − expenses",    "blue")
-kpi(c4, "Profit Margin",  f"{margin_pct:.1f}%",          "Overall margin",        "amber")
-kpi(c5, "Total Parcels",  f"{len(par_df):,}",            "All records",           "purple")
+    # ── Hierarchical route → town → area filters ──
+    all_routes = sorted(par_df["routeName"].dropna().unique()) if "routeName" in par_df.columns else []
+    fc1, fc2, fc3 = st.columns(3)
 
-# ─────────────────────────────────────────────
-# DAILY PARCELS
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Daily parcels</p>', unsafe_allow_html=True)
+    with fc1:
+        sel_route = st.selectbox("Filter by route", ["All routes"] + all_routes, key="par_route")
 
-if not par_f.empty:
-    view_col, chart_col = st.columns([1, 4])
-    with view_col:
-        parcel_view = st.radio("Group by", ["All dates", "By month", "By day of week"])
+    par_r = par_df if sel_route == "All routes" else par_df[par_df["routeName"] == sel_route]
+    all_towns = sorted(par_r["townName"].dropna().unique()) if "townName" in par_r.columns else []
 
-    with chart_col:
-        DOW_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+    with fc2:
+        sel_town = st.selectbox("Filter by town", ["All towns"] + all_towns, key="par_town")
 
-        if parcel_view == "All dates":
-            daily = par_f.groupby("date").size().reset_index(name="count")
-            daily["label"] = daily["date"].dt.strftime("%d %b %Y")
-            fig = go.Figure(go.Bar(x=daily["label"], y=daily["count"], marker_color="#3b82f6", marker_opacity=0.85))
-            fig.update_layout(**CHART_LAYOUT, xaxis_tickangle=-45, yaxis_title="Parcels")
+    par_rt = par_r if sel_town == "All towns" else par_r[par_r["townName"] == sel_town]
+    all_areas = sorted(par_rt["areaName"].dropna().unique()) if "areaName" in par_rt.columns else []
 
-        elif parcel_view == "By month":
-            monthly = par_f.groupby("month_name").size().reset_index(name="count")
-            fig = go.Figure(go.Bar(x=monthly["month_name"], y=monthly["count"], marker_color="#8b5cf6", marker_opacity=0.85))
-            fig.update_layout(**CHART_LAYOUT, yaxis_title="Parcels")
+    with fc3:
+        sel_area = st.selectbox("Filter by area", ["All areas"] + all_areas, key="par_area")
 
+    pv = par_rt if sel_area == "All areas" else par_rt[par_rt["areaName"] == sel_area]
+
+    # ── KPI ──
+    section("Overview")
+    k1, k2, k3, k4 = st.columns(4)
+    delivered  = int((pv["parcelStatus"] == "delivered").sum())  if "parcelStatus" in pv.columns else 0
+    in_transit = int((pv["parcelStatus"] == "in-transit").sum()) if "parcelStatus" in pv.columns else 0
+    pending    = int((pv["parcelStatus"] == "pending").sum())    if "parcelStatus" in pv.columns else 0
+    kpi_card(k1, "Total Parcels", f"{len(pv):,}",     "in current filter",  "cyan")
+    kpi_card(k2, "Delivered",     f"{delivered:,}",    "completed",          "green")
+    kpi_card(k3, "In Transit",    f"{in_transit:,}",   "currently moving",   "amber")
+    kpi_card(k4, "Pending",       f"{pending:,}",      "awaiting dispatch",  "blue")
+
+    # ── Distribution bar charts ──
+    section("Distribution")
+
+    def hbar(df, col, title, ci=0):
+        if col not in df.columns or df.empty:
+            return go.Figure().update_layout(**BL(height=250))
+        cnt = df.groupby(col).size().reset_index(name="n").sort_values("n", ascending=True)
+        fig = go.Figure(go.Bar(
+            x=cnt["n"], y=cnt[col].astype(str), orientation="h",
+            marker_color=COLORS[ci], marker_opacity=0.85,
+            text=cnt["n"], textposition="outside",
+            textfont=dict(size=10, color="#5a6e90"),
+            hovertemplate="%{y}: %{x}<extra></extra>",
+        ))
+        fig.update_layout(**BL(
+            title=dict(text=title, font=dict(size=12, color="#8898b8")),
+            margin=dict(l=0, r=50, t=30, b=0),
+            height=max(260, len(cnt)*38+60),
+            xaxis=dict(gridcolor=GRID), yaxis=dict(gridcolor=GRID),
+            hovermode="y unified",
+        ))
+        return fig
+
+    d1, d2, d3 = st.columns(3)
+    with d1: st.plotly_chart(hbar(pv, "routeName", "Parcels per Route", 0), use_container_width=True)
+    with d2: st.plotly_chart(hbar(pv, "townName",  "Parcels per Town",  1), use_container_width=True)
+    with d3: st.plotly_chart(hbar(pv, "areaName",  "Parcels per Area",  2), use_container_width=True)
+
+    # ── Time Series ──
+    section("Time Series")
+
+    ts_c1, ts_c2 = st.columns([1, 4])
+    with ts_c1:
+        ts_group = st.radio("Group parcels by", ["All dates","By month","By day of week"], key="ts")
+
+    with ts_c2:
+        if ts_group == "All dates":
+            ts = pv.groupby("date").size().reset_index(name="n")
+            ts["lbl"] = ts["date"].dt.strftime("%d %b %Y")
+            xv, yv, ci, ang = ts["lbl"], ts["n"], 0, -45
+        elif ts_group == "By month":
+            ts = pv.groupby(["month","month_label"]).size().reset_index(name="n").sort_values("month")
+            xv, yv, ci, ang = ts["month_label"], ts["n"], 3, -30
         else:
-            dow = par_f.groupby("day_name").size().reset_index(name="count")
-            dow["day_name"] = pd.Categorical(dow["day_name"], categories=DOW_ORDER, ordered=True)
-            dow = dow.sort_values("day_name")
-            fig = go.Figure(go.Bar(x=dow["day_name"], y=dow["count"], marker_color="#22c55e", marker_opacity=0.85))
-            fig.update_layout(**CHART_LAYOUT, yaxis_title="Parcels")
+            ts = pv.groupby("day_name").size().reset_index(name="n")
+            ts["day_name"] = pd.Categorical(ts["day_name"], categories=DOW, ordered=True)
+            ts = ts.sort_values("day_name")
+            xv, yv, ci, ang = ts["day_name"], ts["n"], 1, 0
 
-        st.plotly_chart(fig, use_container_width=True)
+        fig_ts = go.Figure(go.Bar(
+            x=xv, y=yv, marker_color=COLORS[ci], marker_opacity=0.82,
+            hovertemplate="%{x}: %{y} parcels<extra></extra>",
+        ))
+        fig_ts.update_layout(**BL(
+            yaxis_title="Parcels", height=320,
+            xaxis=dict(gridcolor=GRID, tickangle=ang),
+        ))
+        st.plotly_chart(fig_ts, use_container_width=True)
+
+    # ── Efficiency ──
+    section("Delivery Efficiency — Average Time per Stage (minutes)")
+
+    eff_c1, eff_c2 = st.columns([1, 4])
+    with eff_c1:
+        eff_by = st.radio("Break down by", ["Overall","By route","By day of week"], key="eff")
+
+    with eff_c2:
+        edf = pv[["routeName","day_name","reg_min","pending_min","transit_min"]].copy()
+        edf = edf[edf[["reg_min","pending_min","transit_min"]].notna().any(axis=1)]
+
+        if edf.empty:
+            st.info("No timing data for this filter.")
+        else:
+            stages = {
+                "Registration": ("reg_min",     COLORS[0]),
+                "Pending":      ("pending_min",  COLORS[3]),
+                "In Transit":   ("transit_min",  COLORS[1]),
+            }
+
+            if eff_by == "Overall":
+                fig_e = go.Figure()
+                for label, (col, color) in stages.items():
+                    avg = edf[col].mean()
+                    if pd.notna(avg):
+                        fig_e.add_trace(go.Bar(
+                            x=[label], y=[round(avg,1)], name=label,
+                            marker_color=color, marker_opacity=0.85,
+                            text=[f"{avg:.1f}m"], textposition="outside",
+                            textfont=dict(size=11, color=color),
+                        ))
+                fig_e.update_layout(**BL(barmode="group", height=300, showlegend=False,
+                    yaxis_title="Average minutes"))
+
+            elif eff_by == "By route":
+                grp = edf.groupby("routeName")[["reg_min","pending_min","transit_min"]].mean().round(1).reset_index()
+                fig_e = go.Figure()
+                for label, (col, color) in stages.items():
+                    fig_e.add_trace(go.Bar(x=grp["routeName"], y=grp[col], name=label,
+                        marker_color=color, marker_opacity=0.82))
+                fig_e.update_layout(**BL(barmode="group", height=340,
+                    xaxis=dict(gridcolor=GRID, tickangle=-30),
+                    yaxis_title="Average minutes"))
+
+            else:
+                grp = edf.groupby("day_name")[["reg_min","pending_min","transit_min"]].mean().round(1).reset_index()
+                grp["day_name"] = pd.Categorical(grp["day_name"], categories=DOW, ordered=True)
+                grp = grp.sort_values("day_name")
+                fig_e = go.Figure()
+                for label, (col, color) in stages.items():
+                    fig_e.add_trace(go.Bar(x=grp["day_name"], y=grp[col], name=label,
+                        marker_color=color, marker_opacity=0.82))
+                fig_e.update_layout(**BL(barmode="group", height=340,
+                    yaxis_title="Average minutes"))
+
+            st.plotly_chart(fig_e, use_container_width=True)
+
+
+# ═════════════════════════════════════════════════════════════════
+# FINANCIALS
+# ═════════════════════════════════════════════════════════════════
 else:
-    st.info("No parcel data available.")
 
-# ─────────────────────────────────────────────
-# PARCELS PER ROUTE
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Parcels per route</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-title">Financials</div>
+        <div class="page-subtitle">Revenue · Expenses · Profit</div>
+    </div>""", unsafe_allow_html=True)
 
-if not par_df.empty and route_col:
-    route_data = par_df if (sel_route is None or sel_route == "All routes") else par_df[par_df[route_col].astype(str) == sel_route]
-    route_counts = (route_data.groupby(route_col).size()
-                    .reset_index(name="count")
-                    .sort_values("count", ascending=True))
-    fig_r = go.Figure(go.Bar(
-        x=route_counts["count"], y=route_counts[route_col].astype(str),
-        orientation="h", marker_color="#f59e0b", marker_opacity=0.85,
-        text=route_counts["count"], textposition="outside",
-        textfont=dict(family="DM Mono", size=11, color="#94a3b8"),
-    ))
-    fig_r.update_layout(
-        **{**CHART_LAYOUT, "margin": dict(l=0, r=60, t=10, b=0)},
-        xaxis_title="Parcels", yaxis_title="",
-        height=max(300, len(route_counts) * 40),
-    )
-    st.plotly_chart(fig_r, use_container_width=True)
-elif not par_df.empty:
-    st.info("No route field detected in the parcel data. Showing raw records below.")
-    st.dataframe(par_df.head(30), use_container_width=True)
-else:
-    st.info("No parcel data.")
+    # ── KPI ──
+    section("Overview")
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_card(k1, "Total Revenue",  f"KES {total_revenue:,.0f}",  f"{len(rev_df)} txns",      "green")
+    kpi_card(k2, "Total Expenses", f"KES {total_expenses:,.0f}", "incl. transaction costs",  "red")
+    kpi_card(k3, "Net Profit",     f"KES {net_profit:,.0f}",     "revenue minus expenses",   "cyan")
+    kpi_card(k4, "Profit Margin",  f"{margin_pct:.1f}%",          "net ÷ revenue",            "amber")
 
-# ─────────────────────────────────────────────
-# DAILY REVENUE & EXPENSES
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Daily revenue & expenses</p>', unsafe_allow_html=True)
+    # ══════════════════════════════════
+    # EXPENSES
+    # ══════════════════════════════════
+    section("Expenses")
 
-fig_daily = go.Figure()
-if not rev_f.empty:
-    dr = rev_f.groupby("date")["amount"].sum().reset_index()
-    dr["label"] = dr["date"].dt.strftime("%d %b")
-    fig_daily.add_trace(go.Bar(x=dr["label"], y=dr["amount"], name="Revenue",
-                               marker_color="#3b82f6", marker_opacity=0.85))
-if not exp_f.empty:
-    de = exp_f.groupby("date")["amount"].sum().reset_index()
-    de["label"] = de["date"].dt.strftime("%d %b")
-    fig_daily.add_trace(go.Bar(x=de["label"], y=de["amount"], name="Expenses",
-                               marker_color="#ef4444", marker_opacity=0.75))
-fig_daily.update_layout(
-    **CHART_LAYOUT, barmode="group",
-    legend=dict(orientation="h", y=1.1, bgcolor="rgba(0,0,0,0)"),
-    xaxis_tickangle=-45,
-    yaxis=dict(gridcolor="#1e2130", tickprefix="KES "),
-)
-st.plotly_chart(fig_daily, use_container_width=True)
+    if exp_df.empty:
+        st.info("No expense data.")
+    else:
+        ef1, ef2, ef3 = st.columns([1.2, 1.2, 1])
+        with ef1:
+            ch_opts = ["All channels"] + sorted(exp_df["channel"].unique().tolist())
+            sel_ch = st.selectbox("Filter by channel", ch_opts, key="exp_ch")
+        with ef2:
+            exp_grp = st.radio("Group by", ["By month","By day of week"], key="exp_grp", horizontal=True)
+        with ef3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            show_split = st.checkbox("Split transaction costs", value=False)
 
-# ─────────────────────────────────────────────
-# REVENUE vs EXPENSES TREND
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Monthly revenue vs expenses</p>', unsafe_allow_html=True)
+        ev = exp_df if sel_ch == "All channels" else exp_df[exp_df["channel"] == sel_ch]
 
-fig_trend = go.Figure()
-if not rev_df.empty:
-    mr = rev_df.groupby("month")["amount"].sum().reset_index().rename(columns={"amount":"revenue"})
-    fig_trend.add_trace(go.Scatter(x=mr["month"], y=mr["revenue"], name="Revenue",
-        mode="lines+markers", line=dict(color="#3b82f6", width=2.5), marker=dict(size=6),
-        fill="tozeroy", fillcolor="rgba(59,130,246,0.08)"))
+        if exp_grp == "By month":
+            grp = ev.groupby(["month","month_label"]).agg(
+                amt=("amount","sum"), txc=("transactionCost","sum"), tot=("total_cost","sum")
+            ).reset_index().sort_values("month")
+            xv = grp["month_label"]; ang = -30
+        else:
+            grp = ev.groupby("day_name").agg(
+                amt=("amount","sum"), txc=("transactionCost","sum"), tot=("total_cost","sum")
+            ).reset_index()
+            grp["day_name"] = pd.Categorical(grp["day_name"], categories=DOW, ordered=True)
+            grp = grp.sort_values("day_name")
+            xv = grp["day_name"]; ang = 0
 
-    if not exp_df.empty:
-        me = exp_df.groupby("month")["amount"].sum().reset_index().rename(columns={"amount":"expenses"})
-        fig_trend.add_trace(go.Scatter(x=me["month"], y=me["expenses"], name="Expenses",
-            mode="lines+markers", line=dict(color="#ef4444", width=2), marker=dict(size=6)))
-        mg = mr.merge(me, on="month", how="left").fillna(0)
-        mg["net"] = mg["revenue"] - mg["expenses"]
-        fig_trend.add_trace(go.Scatter(x=mg["month"], y=mg["net"], name="Net profit",
-            mode="lines+markers", line=dict(color="#22c55e", width=2, dash="dot"), marker=dict(size=5)))
+        fig_exp = go.Figure()
+        if show_split:
+            fig_exp.add_trace(go.Bar(x=xv, y=grp["amt"], name="Expense",
+                marker_color=COLORS[4], marker_opacity=0.85))
+            fig_exp.add_trace(go.Bar(x=xv, y=grp["txc"], name="Txn cost",
+                marker_color=COLORS[3], marker_opacity=0.75))
+            fig_exp.update_layout(**BL(barmode="stack"))
+        else:
+            fig_exp.add_trace(go.Bar(x=xv, y=grp["tot"], name="Total expense",
+                marker_color=COLORS[4], marker_opacity=0.85,
+                hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>"))
+            fig_exp.update_layout(**BL())
 
-fig_trend.update_layout(
-    **CHART_LAYOUT,
-    legend=dict(orientation="h", y=1.1, bgcolor="rgba(0,0,0,0)"),
-    yaxis=dict(gridcolor="#1e2130", tickprefix="KES "),
-)
-st.plotly_chart(fig_trend, use_container_width=True)
+        fig_exp.update_layout(
+            yaxis=dict(gridcolor=GRID, tickprefix="KES "),
+            xaxis=dict(gridcolor=GRID, tickangle=ang),
+            height=340,
+        )
+        st.plotly_chart(fig_exp, use_container_width=True)
 
-# ─────────────────────────────────────────────
-# BALANCE SHEET
-# ─────────────────────────────────────────────
-st.markdown('<p class="section-header">Balance sheet</p>', unsafe_allow_html=True)
+        # Channel breakdown + top descriptions
+        ec1, ec2 = st.columns(2)
 
-rev_by_source = rev_df.groupby("source")["amount"].sum().to_dict() if not rev_df.empty else {}
-mpesa_rev = rev_by_source.get("M-Pesa", 0)
-biz_rev   = rev_by_source.get("business_number", 0)
-other_rev = sum(v for k, v in rev_by_source.items() if k not in ["M-Pesa","business_number"])
+        with ec1:
+            by_ch = exp_df.groupby("channel")["total_cost"].sum().reset_index()
+            fig_ch = go.Figure(go.Pie(
+                labels=by_ch["channel"], values=by_ch["total_cost"],
+                hole=0.55, marker=dict(colors=COLORS[:len(by_ch)]),
+                textfont=dict(family="IBM Plex Mono", size=11),
+                hovertemplate="%{label}: KES %{value:,.0f}<extra></extra>",
+            ))
+            fig_ch.add_annotation(text="by\nchannel", x=0.5, y=0.5, showarrow=False,
+                font=dict(size=10, color="#3d4f70", family="IBM Plex Mono"), align="center")
+            fig_ch.update_layout(**BL(showlegend=True, height=280, margin=dict(l=0,r=0,t=20,b=0)))
+            st.plotly_chart(fig_ch, use_container_width=True)
 
-def bs_section(title, items, total_label):
-    rows = f'<tr class="section-row"><td colspan="2">{title}</td></tr>'
-    total = 0
-    for name, val in items.items():
-        cls = "positive" if val >= 0 else "negative"
-        rows += f'<tr><td>{name}</td><td class="{cls}" style="text-align:right">KES {val:,.0f}</td></tr>'
-        total += val
-    rows += f'<tr class="total-row"><td>{total_label}</td><td style="text-align:right">KES {total:,.0f}</td></tr>'
-    return rows, total
+        with ec2:
+            top = (exp_df.groupby("description")["total_cost"].sum()
+                   .reset_index().sort_values("total_cost", ascending=True).tail(10))
+            top["description"] = top["description"].fillna("(no description)").str.strip().str[:40]
+            fig_top = go.Figure(go.Bar(
+                x=top["total_cost"], y=top["description"], orientation="h",
+                marker_color=COLORS[2], marker_opacity=0.82,
+                text=top["total_cost"].map(lambda v: f"KES {v:,.0f}"),
+                textposition="outside", textfont=dict(size=9, color="#5a6e90"),
+                hovertemplate="%{y}<br>KES %{x:,.0f}<extra></extra>",
+            ))
+            fig_top.update_layout(**BL(
+                margin=dict(l=0,r=90,t=30,b=0), height=280, hovermode="y unified",
+                title=dict(text="Top expense descriptions", font=dict(size=11,color="#5a6e90")),
+                xaxis=dict(gridcolor=GRID, tickprefix="KES "),
+                yaxis=dict(gridcolor=GRID),
+            ))
+            st.plotly_chart(fig_top, use_container_width=True)
 
-a_html, a_tot = bs_section("Assets", {
-    "M-Pesa collections":       mpesa_rev,
-    "Business number receipts": biz_rev,
-    "Other revenue":            other_rev,
-}, "Total assets")
+    # ══════════════════════════════════
+    # REVENUE
+    # ══════════════════════════════════
+    section("Revenue")
 
-l_html, l_tot = bs_section("Liabilities", {
-    "Operating expenses": total_expenses,
-}, "Total liabilities")
+    if rev_df.empty:
+        st.info("No revenue data.")
+    else:
+        rf1, rf2 = st.columns([2, 1])
+        with rf1:
+            rev_grp = st.radio(
+                "Group by",
+                ["By month","By day of week","By route","By town"],
+                key="rev_grp", horizontal=True,
+            )
+        with rf2:
+            src_opts = ["All sources"] + sorted(rev_df["source"].dropna().unique().tolist()) if "source" in rev_df.columns else ["All sources"]
+            sel_src = st.selectbox("Payment source", src_opts, key="rev_src")
 
-e_html, e_tot = bs_section("Equity", {
-    "Retained earnings (net profit)": net_profit,
-}, "Total equity")
+        rv = rev_df if sel_src == "All sources" else rev_df[rev_df["source"] == sel_src]
 
-bs1, bs2 = st.columns(2)
-with bs1:
-    st.markdown(f'<table class="bs-table"><thead><tr><th>Item</th><th style="text-align:right">Amount</th></tr></thead><tbody>{a_html}</tbody></table>', unsafe_allow_html=True)
-with bs2:
-    le = l_tot + e_tot
-    chk_cls  = "positive" if abs(le - a_tot) < 1 else "negative"
-    chk_text = "✓ Balanced" if abs(le - a_tot) < 1 else "✗ Check figures"
-    st.markdown(f'''<table class="bs-table">
-        <thead><tr><th>Item</th><th style="text-align:right">Amount</th></tr></thead>
-        <tbody>
-            {l_html}{e_html}
-            <tr class="total-row">
-                <td>Liabilities + Equity</td>
-                <td class="{chk_cls}" style="text-align:right">KES {le:,.0f}&nbsp;<span style="font-size:11px">{chk_text}</span></td>
-            </tr>
-        </tbody>
-    </table>''', unsafe_allow_html=True)
+        if rev_grp == "By month":
+            grp = rv.groupby(["month","month_label"])["amount"].sum().reset_index().sort_values("month")
+            xv, yv, ci, ang = grp["month_label"], grp["amount"], 1, -30
+        elif rev_grp == "By day of week":
+            grp = rv.groupby("day_name")["amount"].sum().reset_index()
+            grp["day_name"] = pd.Categorical(grp["day_name"], categories=DOW, ordered=True)
+            grp = grp.sort_values("day_name")
+            xv, yv, ci, ang = grp["day_name"], grp["amount"], 0, 0
+        elif rev_grp == "By route":
+            grp = rv.groupby("routeName")["amount"].sum().reset_index().sort_values("amount", ascending=False)
+            xv, yv, ci, ang = grp["routeName"], grp["amount"], 3, -30
+        else:
+            grp = rv.groupby("townName")["amount"].sum().reset_index().sort_values("amount", ascending=False)
+            xv, yv, ci, ang = grp["townName"], grp["amount"], 2, -30
 
-# ─────────────────────────────────────────────
-# PROFIT MARGIN TREND
-# ─────────────────────────────────────────────
-if not rev_df.empty and not exp_df.empty:
-    st.markdown('<p class="section-header">Profit margin trend</p>', unsafe_allow_html=True)
-    mr2 = rev_df.groupby("month")["amount"].sum().reset_index().rename(columns={"amount":"revenue"})
-    me2 = exp_df.groupby("month")["amount"].sum().reset_index().rename(columns={"amount":"expenses"})
-    mg2 = mr2.merge(me2, on="month", how="left").fillna(0)
-    mg2 = mg2[mg2["revenue"] > 0].copy()
-    mg2["margin"] = ((mg2["revenue"] - mg2["expenses"]) / mg2["revenue"] * 100).round(1)
+        fig_rev = go.Figure(go.Bar(
+            x=xv, y=yv, marker_color=COLORS[ci], marker_opacity=0.85,
+            hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>",
+        ))
+        if rev_grp in ["By month","By day of week"]:
+            fig_rev.add_trace(go.Scatter(
+                x=xv, y=yv, mode="lines+markers",
+                line=dict(color="#ffffff44", width=1.5, dash="dot"),
+                marker=dict(size=5, color="#ffffff88"), name="Trend",
+                hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>",
+            ))
+        fig_rev.update_layout(**BL(
+            yaxis=dict(gridcolor=GRID, tickprefix="KES "),
+            xaxis=dict(gridcolor=GRID, tickangle=ang),
+            height=360, showlegend=False,
+        ))
+        st.plotly_chart(fig_rev, use_container_width=True)
 
-    fig_mg = go.Figure(go.Scatter(
-        x=mg2["month"], y=mg2["margin"],
-        fill="tozeroy", mode="lines+markers",
-        line=dict(color="#8b5cf6", width=2.5),
-        fillcolor="rgba(139,92,246,0.10)",
-        marker=dict(size=7, color="#8b5cf6"),
-        text=[f"{v:.1f}%" for v in mg2["margin"]],
-        textposition="top center",
-        textfont=dict(family="DM Mono", size=10, color="#8b5cf6"),
-        hovertemplate="<b>%{x}</b><br>Margin: %{y:.1f}%<extra></extra>",
-    ))
-    avg = mg2["margin"].mean()
-    fig_mg.add_hline(y=avg, line_dash="dot", line_color="#475569", line_width=1,
-                     annotation_text=f"avg {avg:.1f}%",
-                     annotation_font=dict(family="DM Mono", size=10, color="#475569"))
-    fig_mg.update_layout(
-        **CHART_LAYOUT, showlegend=False,
-        yaxis=dict(gridcolor="#1e2130", ticksuffix="%"),
-    )
-    st.plotly_chart(fig_mg, use_container_width=True)
+        # Source donut + monthly net profit
+        rc1, rc2 = st.columns(2)
 
-# ─────────────────────────────────────────────
-# RAW DATA
-# ─────────────────────────────────────────────
-with st.expander("📄 Revenue transactions"):
-    cols = [c for c in ["date","amount","source","description","mpesaCode"] if c in rev_df.columns]
-    st.dataframe(rev_df[cols].sort_values("date", ascending=False), use_container_width=True)
+        with rc1:
+            if "source" in rev_df.columns:
+                by_src = rev_df.groupby("source")["amount"].sum().reset_index()
+                fig_src = go.Figure(go.Pie(
+                    labels=by_src["source"], values=by_src["amount"],
+                    hole=0.55, marker=dict(colors=COLORS[:len(by_src)]),
+                    textfont=dict(family="IBM Plex Mono", size=11),
+                    hovertemplate="%{label}: KES %{value:,.0f}<extra></extra>",
+                ))
+                fig_src.add_annotation(text="by\nsource", x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=10, color="#3d4f70", family="IBM Plex Mono"), align="center")
+                fig_src.update_layout(**BL(showlegend=True, height=280, margin=dict(l=0,r=0,t=20,b=0)))
+                st.plotly_chart(fig_src, use_container_width=True)
 
-if not exp_df.empty:
+        with rc2:
+            if not exp_df.empty:
+                mr = rev_df.groupby("month_label")["amount"].sum().reset_index().rename(columns={"amount":"rev"})
+                me = exp_df.groupby("month_label")["total_cost"].sum().reset_index().rename(columns={"total_cost":"exp"})
+                mn = mr.merge(me, on="month_label", how="outer").fillna(0)
+                mn["net"] = mn["rev"] - mn["exp"]
+                colors_net = [COLORS[1] if v >= 0 else COLORS[4] for v in mn["net"]]
+                fig_net = go.Figure(go.Bar(
+                    x=mn["month_label"], y=mn["net"],
+                    marker_color=colors_net, marker_opacity=0.85,
+                    hovertemplate="%{x}<br>Net: KES %{y:,.0f}<extra></extra>",
+                ))
+                fig_net.update_layout(**BL(
+                    title=dict(text="Monthly net profit", font=dict(size=11, color="#5a6e90")),
+                    yaxis=dict(gridcolor=GRID, tickprefix="KES "),
+                    xaxis=dict(gridcolor=GRID, tickangle=-30),
+                    height=280, margin=dict(l=0,r=0,t=30,b=0), showlegend=False,
+                ))
+                st.plotly_chart(fig_net, use_container_width=True)
+
+    # ── Raw data ──
+    with st.expander("📄 Revenue transactions"):
+        cols = [c for c in ["date","amount","source","description","mpesaCode","routeName","townName"] if c in rev_df.columns]
+        st.dataframe(rev_df[cols].sort_values("date", ascending=False), use_container_width=True)
+
     with st.expander("📄 Expense transactions"):
-        st.dataframe(exp_df.sort_values("date", ascending=False), use_container_width=True)
-
-if not par_df.empty:
-    with st.expander("📄 Parcel records"):
-        st.dataframe(par_df.sort_values("date", ascending=False), use_container_width=True)
+        cols = [c for c in ["date","channel","sourceModel","amount","transactionCost","total_cost","description","phone"] if c in exp_df.columns]
+        st.dataframe(exp_df[cols].sort_values("date", ascending=False), use_container_width=True)
