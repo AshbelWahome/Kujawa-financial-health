@@ -546,13 +546,13 @@ else:
             x=xv, y=yv, marker_color=COLORS[ci], marker_opacity=0.85,
             hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>",
         ))
-if rev_grp in ["By month","By day of week"]:
-    fig_rev.add_trace(go.Scatter(
-        x=xv, y=yv, mode="lines+markers",
-        line=dict(color="rgba(255,255,255,0.27)", width=1.5, dash="dot"),
-        marker=dict(size=5, color="rgba(255,255,255,0.53)"), name="Trend",
-        hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>",
-    ))
+        if rev_grp in ["By month","By day of week"]:
+            fig_rev.add_trace(go.Scatter(
+                x=xv, y=yv, mode="lines+markers",
+                line=dict(color="rgba(255,255,255,0.27)", width=1.5, dash="dot"),
+                marker=dict(size=5, color="rgba(255,255,255,0.53)"), name="Trend",
+                hovertemplate="%{x}<br>KES %{y:,.0f}<extra></extra>",
+            ))
         fig_rev.update_layout(**BL(
             yaxis=dict(gridcolor=GRID, tickprefix="KES "),
             xaxis=dict(gridcolor=GRID, tickangle=ang),
