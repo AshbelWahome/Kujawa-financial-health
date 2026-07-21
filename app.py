@@ -207,19 +207,24 @@ API_URL = "https://server.bookmetro.co.ke/api/v1.1/parcels/analytics/export"
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch():
-    try:
-        headers = {"Accept": "application/json"}
-        r = requests.get(API_URL, headers=headers, timeout=25)
-        r.raise_for_status()
-        return r.json(), None
-    except Exception as e:
-        return None, str(e)
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    r = requests.get(API_URL, headers=headers, timeout=25)
+    r.raise_for_status()
+    return r.json()
 
 with st.spinner("Loading data..."):
-    raw, fetch_err = fetch()
+    try:
+        raw = fetch()
+    except Exception as e:
+        fetch.clear()
+        try:
+            raw = fetch()
+        except Exception as e2:
+            st.error(f"Could not load data: {e2}")
+            st.stop()
 
-if fetch_err or not raw:
-    st.error(f"API error: {fetch_err}")
+if not raw or "data" not in raw:
+    st.error("Unexpected API response — please refresh.")
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────
