@@ -208,7 +208,8 @@ API_URL = "https://server.bookmetro.co.ke/api/v1.1/parcels/analytics/export"
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch():
     try:
-        r = requests.get(API_URL, timeout=25)
+        headers = {"Accept": "application/json"}
+        r = requests.get(API_URL, headers=headers, timeout=25)
         r.raise_for_status()
         return r.json(), None
     except Exception as e:
